@@ -9,9 +9,9 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Package {
+public class Package<T> {
 
     private int id;
-    private String content;
+    private T content;
     private String timestamp;
 }

@@ -1,6 +1,9 @@
 package REDES.TP2.CAPAS;
 
 import REDES.TP2.Package;
+import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Controller;
+import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -10,7 +13,6 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDateTime;
 
 @RestController
-@RequestMapping("/host1")
 public class Host1ENLACE implements Host1ENLACEInterface{
 
     static final String FLAG = "01111110"; // Delimitador de inicio y fin de trama
@@ -21,26 +23,50 @@ public class Host1ENLACE implements Host1ENLACEInterface{
 
 
     //recibe el paquete de la capa de red lo convierte a binario y lo manda a entramar
-    @PostMapping("/receive")
-    public  void administrarPaquete(@RequestBody Integer paquete) {
+    public<T>  String administrarPaquete(@RequestBody Package<T> paquete) {
+
+        String binaryRepresentation = "";
+
+        //obtenemos el dato content (como puede ser entero o string usamos generico, tenemos que hacer algunas confirmaciones)
+
+        T content = paquete.getContent();  // Obtenemos el contenido con el tipo T
+
+        // Podemos utilizar el contenido dependiendo de su tipo
+
+        if (content instanceof Integer) {
+
+            Integer dato = (Integer) content;
+
+            // Convertir el número entero a su representación binaria
+
+             binaryRepresentation = Integer.toBinaryString(dato);
 
 
-        // Convertir el número entero a su representación binaria
+        } else if (content instanceof String) {
 
-        String binaryRepresentation = Integer.toBinaryString(paquete);
-        System.out.println("converti" + paquete +"a"+binaryRepresentation);
+            String dato = (String) content;
+
+            //Convertir el String a su representacion binaria
+
+             binaryRepresentation = stringToBinary(dato);
+
+        }
+
 
         //mandamos a entramar
         String paqueteEntramado = entramarPaquete(binaryRepresentation);
+        System.out.println("Paquete entramado (sin CRC): " + paqueteEntramado);
 
         //aplicamos CRC a los datos
 
         String paqueteEntramadoConCRC = agregarCRC(paqueteEntramado,polinomioGenerador);
 
+        System.out.println("Paquete entramado con CRC: " + paqueteEntramadoConCRC);
+
         String paqueteEnviado = mandarPaquete(paqueteEntramadoConCRC);
 
-        System.out.println("Se mando al host 2 el paquete" + paqueteEnviado);
 
+        return paqueteEnviado;
 
     }
 
@@ -96,11 +122,10 @@ public class Host1ENLACE implements Host1ENLACEInterface{
         return temp.substring(1); // Retornamos el residuo (sin el bit más significativo)
     }
 
-    public static String agregarCRC(String paquete, String polinomioGenerador){
-        String datosConPadding = paquete + "0".repeat(polinomioGenerador.length() - 1); // Agregamos ceros al final
+    String agregarCRC(String paquete, String polinomioGenerador) {
+        String datosConPadding = paquete + "0".repeat(polinomioGenerador.length() - 1); // Agregamos ceros
         String crc = aplicarCrc(datosConPadding, polinomioGenerador);
-        return paquete + crc; // Concatenamos los datos con el CRC calculado
-
+        return paquete + " " + crc; // Concatenamos los datos con el CRC calculado
     }
     //ahora lo mandamos de la capa de enlace pero hay q crear un objeto capa fisica y mandarlo por ahi
     public static String mandarPaquete(String paquete){
@@ -115,6 +140,42 @@ public class Host1ENLACE implements Host1ENLACEInterface{
         // Enviar el paquete a Host 2
         String response = restTemplate.postForObject(url, paquete, String.class);
 
-        return "Respuesta de Host 2: " + response;
+        System.out.println("----------------Se mando al host 2 el paquete-------------- " + response + "----------");
+
+        return response;
+    }
+
+    //Metodo para convertir un string en su representacion Binaria
+    public static String stringToBinary(String input) {
+        StringBuilder binary = new StringBuilder();
+
+        for (char character : input.toCharArray()) {
+            // Convertir cada carácter a su valor numérico y luego a binario
+            String binaryString = Integer.toBinaryString(character);
+
+            // Asegurarse de que cada carácter esté representado en 8 bits (1 byte)
+            while (binaryString.length() < 8) {
+                binaryString = "0" + binaryString;
+            }
+
+            binary.append(binaryString).append(" ");  // Agregar un espacio entre cada byte
+        }
+
+        return binary.toString().trim();  // Remover el espacio final
+    }
+
+    @PostMapping("/host1/ack")
+    public String recibirAcuseRecibo(@RequestBody String acuseRecibo) {
+        System.out.println("Acuse de recibo recibido en Host 1: " + acuseRecibo);
+
+        // Comprobar si es un ACK o NACK
+        if ("ACK".equals(acuseRecibo)) {
+            System.out.println("Transmisión exitosa. Datos recibidos correctamente.");
+        } else if ("NACK".equals(acuseRecibo)) {
+            System.out.println("Error en la transmisión. CRC inválido.");
+            // Aquí puedes decidir retransmitir el paquete o tomar otra acción
+        }
+
+        return "Acuse de recibo procesado.";
     }
 }
