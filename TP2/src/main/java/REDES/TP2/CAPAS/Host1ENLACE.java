@@ -1,14 +1,12 @@
 package REDES.TP2.CAPAS;
 
 import REDES.TP2.Package;
-import org.springframework.context.annotation.Bean;
-import org.springframework.stereotype.Controller;
-import org.springframework.stereotype.Service;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
+
 
 import java.time.LocalDateTime;
 
@@ -19,6 +17,9 @@ public class Host1ENLACE implements Host1ENLACEInterface{
     static final String ESC = "01111101"; // Carácter de escape
 
     static final String polinomioGenerador = "1101";
+
+    @Autowired
+    Host1FISICA host1FISICA;
 
 
 
@@ -63,7 +64,7 @@ public class Host1ENLACE implements Host1ENLACEInterface{
 
         System.out.println("Paquete entramado con CRC: " + paqueteEntramadoConCRC);
 
-        String paqueteEnviado = mandarPaquete(paqueteEntramadoConCRC);
+        String paqueteEnviado = host1FISICA.mandarPaquete(paqueteEntramadoConCRC);
 
 
         return paqueteEnviado;
@@ -128,22 +129,7 @@ public class Host1ENLACE implements Host1ENLACEInterface{
         return paquete + " " + crc; // Concatenamos los datos con el CRC calculado
     }
     //ahora lo mandamos de la capa de enlace pero hay q crear un objeto capa fisica y mandarlo por ahi
-    public static String mandarPaquete(String paquete){
 
-        // Crear una instancia de RestTemplate
-        RestTemplate restTemplate = new RestTemplate();
-
-        String url = "http://localhost:8081/host2/receive";
-
-
-
-        // Enviar el paquete a Host 2
-        String response = restTemplate.postForObject(url, paquete, String.class);
-
-        System.out.println("----------------Se mando al host 2 el paquete-------------- " + response + "----------");
-
-        return response;
-    }
 
     //Metodo para convertir un string en su representacion Binaria
     public static String stringToBinary(String input) {
